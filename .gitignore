@@ -1,0 +1,9 @@
+.next
+build
+node_modules
+pages
+utils
+ganache.sh
+OPCPool.code-workspace
+steps.txt
+opcp_readme.docx

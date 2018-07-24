@@ -1,0 +1,26 @@
+{
+  "name": "OPCPool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "next dev"
+  },
+  "keywords": [],
+  "author": "Igor Lovyagin",
+  "license": "ISC",
+  "dependencies": {
+    "next": "^6.1.0",
+    "openzeppelin-solidity": "1.10.0",
+    "react": "^16.4.1",
+    "react-dom": "^16.4.1",
+    "semantic-ui-css": "^2.3.3",
+    "semantic-ui-react": "^0.82.0",
+    "solc": "^0.4.24",
+    "web3": "^1.0.0-beta.34"
+  }
+}
