@@ -59,14 +59,12 @@ Service providers
 
 Project status
 
-Before moving to production, the contract code will need some cleaning and minor optimization. Also, addition of some elements of DAO-style governance may be considered. However, that is not the main focus of the work on the project at this point.
+Project remains work in progress. Eventually, the contract code will need some cleaning and minor optimizations. Also, an addition of some elements of DAO-style governance may be considered. At this  point, however, the biggest challenges lie on the service provider side of the infrastructure.
 
-OPCP token used with online casino web sites relies on the game servers driving the game logic and reporting back the result. Due to its block chain-based nature, server software presents several challenges not present in a traditional system:
+OPCP token relies on casino game servers to drive customer-facing web sites, implement the game logic and report gaming session outcomes back to the contract. Such architecture presents additional challenges compared to a traditional system.
+Assuring that the game server hasn’t been hacked and player session data reported back to OPCP contract can be trusted. Game servers driving a traditional online casino  have to be protected from outside hackers and that in and of itself is a challenge. Blockchain-based decentralized environment creates an new threat by incentivizing web site operators who host their instance of game server software to act maliciously.
 
-- Secure method of generating random numbers. Nothing is private on a block chain. Same goes for the seed numbers used to generate pseudo-random sequences. An acceptable solution must not compromise user experience by slowing games down. It should also preserve decentralization which would be sacrificed if randomness is generated off-chain by oracles.
-- Assuring that the game server hasn’t been hacked and player session data reported back to OPCP contract can be trusted. Game servers running in a traditional setup have to be protected from outside hackers and that in and of itself is a challenge. Blockchain-based decentralized environment creates an additional threat by incentivizing web site operators who also host instances of game server software to hack their own installations.
-
-Besides these two fundamental challenges presented by decentralization, there are few other less obvious requirements that would have to be satisfied for a game server solution to be acceptable. And that is the area where current work on the project is focused.
+Difficulty of generating secure pseudo-random numbers on a public blockchain is a well known challenge for DApp developers. Using oracles to solve this problem has a negative impact on DApp’s decentralization. OPCP business model is built on top of real-world-facing game servers that already act as oracles. That doesn’t mean, however,  that RNG problem has been solved.  We have to assure, somehow, that sources of randomness used by casino servers haven’t been replaced with fakes or somehow compromised. 
 
 Alternative applications
 
