@@ -1,6 +1,14 @@
 # OPCP-token
 ERC20 compatible operating capital pool token
 
+Introduction
+
+Conventional wisdom dictates that gambling is a losing proposition. As long as this holds, the opposite must be true too:  being on the other side of the equation and taking bets instead of making them must be lucrative. Hence, the issue at hand: how can one become the house without a starting capital and a good understanding of the gambling industry. OPCP token idea was conceived in an attempt to answer that question.  
+
+To facilitate the discussion and to show the project to the interested parties, I placed it on GitHub. This shouldn’t be construed, however, as a piece of code ready for an ICO. I’m not soliciting help with debugging or suggestions on how to clean up the code. For now, this is a thought experiment and a good starting point on the path to building a decentralized crowd-funded service.
+
+For a more technical discussion on a deeper level, please read on…
+
 Motivation 
 
 Operating capital pool (OPCP) token is modeled after a business that’s characterized by a high volume of micro transactions with its end users. Outcome of a single transaction can be either a win or a loss for the business. Summary outcome of a statistically significant set of transactions, however, is always a calculable gain. 
