@@ -1,14 +1,14 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.4;
 
 // using base class template from the open-zeppelin project https://github.com/OpenZeppelin/openzeppelin-solidity
-import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/StandardBurnableToken.sol";
+import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 
 /**
  * @title Operating Capital Pool token
  * @author Igor Lovyagin @i-lovyagin
 */
 
-contract OPCPToken is StandardBurnableToken {
+contract OPCPToken is ERC20Burnable {
 
 	string public constant name = "OPCP Token";
 	string public constant symbol = "OPCP"; 
@@ -62,7 +62,7 @@ contract OPCPToken is StandardBurnableToken {
 // target per-cycle per-token profit as a percentage 	
 	uint8 public targetEarningsPct;
 // token reserve asssigned the contract owner. These tokens are eligible to participate in 
-// per-token profit distributions. They also function as a buffer that shrinks whenever ptrofit is below the target
+// per-token profit distributions. They also function as a buffer that shrinks whenever profit is below the target
 // and some tokens from the reserve have to be burned to achive the required profit-to-token-supppy ratio
 	uint256 public initialOwnerTokens;
 
@@ -159,9 +159,12 @@ contract OPCPToken is StandardBurnableToken {
 			uint8 _spCommissionPct,
 			uint8 _unlockMultiplier) public {
 				
-		totalSupply_ = toUnits(_totalSupply);
+// old openzeppelin
+		// totalSupply_ = toUnits(_totalSupply);
+    _mint(msg.sender, toUnits(_totalSupply));
 		conversionRate = fromUnits(_rate);
-		balances[msg.sender] = totalSupply_;
+// old openzeppelin
+		// balances[msg.sender] = totalSupply;
 		owner = msg.sender;
 		targetEarningsPct = _targetEarningsPct;
 		accountingCycle = _accountingCycleDays * (1 days);
@@ -175,8 +178,8 @@ contract OPCPToken is StandardBurnableToken {
 		providers[owner].description = "Default provider";
 		providers[owner].active = true;
 		providers[owner].nextSettlement = nextDistribution;
-
-		emit Transfer(address(0), owner, totalSupply_);
+// old openzeppelin
+//		emit Transfer(address(0), owner, totalSupply_); 
 	}
 
 	/**
@@ -184,11 +187,9 @@ contract OPCPToken is StandardBurnableToken {
 	* @param _ownerTokensPct share of tokens allocated to contract owner expressed in term pf percentage points
 	*/
 	function setStore(uint8 _ownerTokensPct) public {
-		initialOwnerTokens = totalSupply_.div(100).mul(_ownerTokensPct);
+		initialOwnerTokens = balanceOf(owner).div(100).mul(_ownerTokensPct);
 		tokenStore = msg.sender;
-		balances[owner] = initialOwnerTokens;
-		balances[tokenStore] = totalSupply_ - initialOwnerTokens; 
-		emit Transfer(owner, tokenStore, totalSupply_ - initialOwnerTokens);
+    _transfer(owner, tokenStore, totalSupply() - initialOwnerTokens);
 	}
 
 	/**
@@ -196,9 +197,9 @@ contract OPCPToken is StandardBurnableToken {
 	* @param description description of a service provider being registered
 	* @return boolean success
 	*/
-	function registerSP(string description) public returns(bool success) {
+	function registerSP(string memory description) public returns(bool success) {
 		require(!providers[msg.sender].active); // already registered
-		require(balances[msg.sender] >= toUnits(spLockedTokens)); // can security deposit
+		require(balanceOf(msg.sender) >= toUnits(spLockedTokens)); // can security deposit
 	// initialize once when the first sp registers. This implicitely marks the start of normal opeartion with accounting cycles
 		if (nextDistribution == DISTANT_FUTURE)	{ 
 			nextDistribution = now + accountingCycle;
@@ -229,13 +230,13 @@ contract OPCPToken is StandardBurnableToken {
 		if (gain < 0)	{
 	// cycle loss converted to commission converted to tokens
 			uint256 lossInTokens = fromWei(uint256(0 - gain).div(100).mul(spCommissionPct));
-			if (lossInTokens <= balances[msg.sender])	{
+			if (lossInTokens <= balanceOf(msg.sender))	{
 	// compensate losses by confiscating provider's tokens
 				tokensToBurn += lossInTokens;
 			}
 			else	{
 	// not enough tokens to compensate for the loss in full. Take all of the provider's tokens				
-				tokensToBurn += balances[msg.sender];  
+				tokensToBurn += balanceOf(msg.sender);  
 			}
 		}
 		else	{
@@ -303,7 +304,7 @@ contract OPCPToken is StandardBurnableToken {
 	* @param _amount amount of withdrawl
 	* @return boolean success
 	*/
-	function customerWithdrawal(address _customer, uint256 _amount) public returns(bool success)	{
+	function customerWithdrawal(address payable _customer, uint256 _amount) public returns(bool success)	{
 	// see if requesting provider is assigned to the withdrawing customer
 		require(customers[_customer].provider == msg.sender);
 	// see if requested amount doesn't exceed customer balance
@@ -422,17 +423,17 @@ contract OPCPToken is StandardBurnableToken {
 	// size of the array storing earlier end-of-cycle distributions
 				uint256 sequence = distributions.length;
 	// initialize Distribution structure with data from the cycle being closed
-				Distribution memory d = Distribution(gain, totalSupply_.sub(balances[tokenStore]), now);  
+				Distribution memory d = Distribution(gain, totalSupply().sub(balanceOf(tokenStore)), now);  
 	// add to the distributions array. Now the token holder can request payouts in proportion to their token holdings
 				distributions.push(d); 
 	 // keep track of summary reserved payouts				 
 				pendingPayouts += gain;
-				emit EndOfCycle(cycleCount, int128(gain), pendingPayouts, customerDeposits, address(this).balance, totalSupply_);
+				emit EndOfCycle(cycleCount, int128(gain), pendingPayouts, customerDeposits, address(this).balance, totalSupply());
 				setReservePolicy(gain);
 			}
 			else{
 				// it's a loss. Postpone alll calculations and distributions until the end of next cycle
-				emit EndOfCycle(cycleCount, cycleEarnings, pendingPayouts, customerDeposits, address(this).balance, totalSupply_);
+				emit EndOfCycle(cycleCount, cycleEarnings, pendingPayouts, customerDeposits, address(this).balance, totalSupply());
 			}
 			cycleCount++;
 		}
@@ -448,18 +449,18 @@ contract OPCPToken is StandardBurnableToken {
 	// "required" number of tokens that would make realized per-token-gain match the target setting
 			uint256 requiredTokenSupply =fromWei( gain.div(targetEarningsPct).mul(100));
 	//	required supply is less than total supply
-			if (requiredTokenSupply < totalSupply_)	{
+			if (requiredTokenSupply < totalSupply())	{
 	// calculate the surplus
-				uint256 surplus =  totalSupply_ - requiredTokenSupply;
-				if (surplus <= balances[owner])	{
+				uint256 surplus =  totalSupply() - requiredTokenSupply;
+				if (surplus <= balanceOf(owner))	{
 	// number of extra tokes is less than the token count held by the contracxt owner				
 					_burn(owner, surplus);
 				}
 				else	{
 	// number of extra tokes is greater than the token count held by the contracxt owner				
 	// burn ALL of the owner's tokens
-					surplus -= balances[owner];
-					_burn(owner, balances[owner]);
+					surplus -= balanceOf(owner);
+					_burn(owner, balanceOf(owner));
 	// attempt to buy back the remaining surplus
 					buybackTokens = buybackTokens.add(surplus);
 				}
@@ -467,27 +468,23 @@ contract OPCPToken is StandardBurnableToken {
 			else	{
 				buybackTokens = 0;
 	// not enough tokens to distribute profits at a pre-configured per-token level. Calculate the deficit
-				uint256 deficit =  requiredTokenSupply - totalSupply_;
-	    		totalSupply_ = totalSupply_.add(deficit);
-				if (initialOwnerTokens > balances[owner])	{
+				uint256 deficit =  requiredTokenSupply - totalSupply();
+				if (initialOwnerTokens > balanceOf(owner))	{
 	// some of the contract owner's tokens have been burned during an earlier cycle
-					uint256 ownerDeficit = initialOwnerTokens - balances[owner];
+					uint256 ownerDeficit = initialOwnerTokens - balanceOf(owner);
 					if (deficit >= ownerDeficit)	{
 	// overall shortage of tokens is greater than the number of tokens missing from the contract owner's reserve						
 						deficit -= ownerDeficit;
 	// mint new tokens to the contract owner						
-						balances[owner] += ownerDeficit;
-					    emit Mint(owner, ownerDeficit);
+            _mint(owner, ownerDeficit);
 						if (deficit > 0)	{
 	// mint the remaining tokens and put them up for sale						
-			    			balances[tokenStore] = balances[tokenStore].add(deficit);
-						    emit Mint(tokenStore, deficit);
+              _mint(tokenStore, deficit);
 						}
 					}
 					else	{
 	// partially restore contract owner's reserve by minting new tokens to the contract owner
-						balances[owner] += deficit;
-					    emit Mint(owner, deficit);
+            _mint(owner, deficit);
 					}
 				}
 			}
@@ -505,7 +502,7 @@ contract OPCPToken is StandardBurnableToken {
 	*/
 	function validateBuyback(address holder, uint256 requestedBuybackInWei) public view returns(bool)	{
 		uint256 tokens = fromWei(requestedBuybackInWei);
-		return ((balances[holder] >= tokens) && (tokens <= buybackTokens));
+		return ((balanceOf(holder) >= tokens) && (tokens <= buybackTokens));
 	}
 
 
@@ -530,14 +527,14 @@ contract OPCPToken is StandardBurnableToken {
 	*/
 	function currentTokenValue() public view returns (uint256) {
 		uint256 availableBalance = address(this).balance - pendingPayouts - customerDeposits;
-		uint256 redeemableTokens = 	totalSupply_ - balances[owner] - balances[tokenStore];
+		uint256 redeemableTokens = 	totalSupply() - balanceOf(owner) - balanceOf(tokenStore);
 		return availableBalance.div(redeemableTokens);
 	}
 
 	/**
 	* @dev Fallback function allowing to send ether to the contract
 	*/
-    function () public payable {}
+  function () external payable {}
 
 	/**
 	* @dev Utility function to convert amount in Weis to the number of tokens

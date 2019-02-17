@@ -6,7 +6,7 @@ let src, dest;
 let owner, trustee;
 
 const totalSupply = 5 * Math.pow(10, 5);
-const rate = web3.toWei(20, "finney");
+const rate = web3.utils.toWei("20", "finney");
 const targetEarningsPct = 2;
 const accountingCycleDays = 28;
 const spLockedTokens = 100;
@@ -91,7 +91,7 @@ contract('OPCPToken', async (accounts)=> {
         result = await opcp_token.approve(trustee, Math.pow(10, 5), {from:owner});
         assert.equal(true, await opcp_token.transferFrom.call(owner, dest, 3 * Math.pow(10, 4), {from:trustee}), "returns correct boolean");
         result = await opcp_token.transferFrom(owner, dest,4 * Math.pow(10, 4), {from:trustee});
-        assert.equal(1, result.logs.length, "Triggers one EVT");
+        assert.equal(2, result.logs.length, "Triggers two events");
         assert.equal(result.logs[0].event, "Transfer", "EVT: of type Transfer");
         assert.equal(result.logs[0].args.from, owner, "EVT: Payer account");
         assert.equal(result.logs[0].args.to, dest,"EVT: Payee account");

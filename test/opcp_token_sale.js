@@ -5,7 +5,7 @@ let sale;
 
 
 const tokenSupply = 5 * Math.pow(10, 5);
-const tokenPrice = web3.toWei(20, "finney");
+const tokenPrice = web3.utils.toWei("20", "finney");
 const targetEarningsPct = 2;
 const accountingCycleDays = 28;
 const spLockedTokens = 100;
@@ -20,7 +20,7 @@ contract('OPCPTokenSale and OPCPToken', async (accounts)=> {
 
     const owner = accounts[0];
     const inv1 = accounts[1];
-    const wallet = accounts[10];
+    const wallet = accounts[9];
 
 
     let result, bal1, bal2, bal3, bal4, toks1, toks2, toks3, toks4;
@@ -44,27 +44,25 @@ contract('OPCPTokenSale and OPCPToken', async (accounts)=> {
         // token price 20 finney. 2 ether buys 400 tokens
         var pricePaid = 3.5;
 
-        bal1 = (await web3.eth.getBalance(wallet)).toNumber();
-        bal2 = (await web3.eth.getBalance(inv1)).toNumber();
-        toks1 = (await token.balanceOfAdj.call(inv1)).toNumber();
-        toks3 = (await token.balanceOfAdj.call(sale.address)).toNumber();
+        bal1 = (await web3.eth.getBalance(wallet));
+        bal2 = (await web3.eth.getBalance(inv1));
+        toks1 = (await token.balanceOfAdj.call(inv1));
+        toks3 = (await token.balanceOfAdj.call(sale.address));
 
-        result = await sale.buyTokens({from:inv1, value:web3.toWei(pricePaid, "ether")});
+        result = await sale.buyTokens({from:inv1, value:web3.utils.toWei(String(pricePaid), "ether")});
 
-        bal3 = (await web3.eth.getBalance(wallet)).toNumber();
-        bal4= (await web3.eth.getBalance(inv1)).toNumber();
-        toks2 = (await token.balanceOfAdj.call(inv1)).toNumber();
-        toks4 = (await token.balanceOfAdj.call(sale.address)).toNumber();
-
-        // calculation rounded to gweis to avoid rounding problems of wei
-        x1 = web3.eth.getTransaction(result.receipt.transactionHash).gasPrice.toNumber();
+        bal3 = (await web3.eth.getBalance(wallet));
+        bal4= (await web3.eth.getBalance(inv1));
+        toks2 = (await token.balanceOfAdj.call(inv1));
+        toks4 = (await token.balanceOfAdj.call(sale.address));
+        x1 = (await web3.eth.getTransaction(result.receipt.transactionHash)).gasPrice;
         x2 = result.receipt.gasUsed;
-        x3 = parseInt(web3.fromWei(bal3, "gwei")) - parseInt(web3.fromWei(bal1, "gwei"));
-        x4 = parseInt(web3.fromWei(bal2, "gwei")) - parseInt(web3.fromWei(bal4, "gwei"));
-        x5 = parseInt(web3.fromWei(web3.toWei(pricePaid, "ether"), "gwei")); // cost of tokens
-        x6 = parseInt(web3.fromWei(x1 * x2, "gwei"));  //gas
+        x3 = parseInt(web3.utils.fromWei(String(bal3), "gwei")) - parseInt(web3.utils.fromWei(String(bal1), "gwei"));
+        x4 = parseInt(web3.utils.fromWei(String(bal2), "gwei")) - parseInt(web3.utils.fromWei(String(bal4), "gwei"));
+        x5 = parseInt(web3.utils.fromWei(web3.utils.toWei(String(pricePaid), "ether"), "gwei")); // cost of tokens
+        x6 = parseInt(web3.utils.fromWei(String(x1 * x2), "gwei"));  //gas
         x7 = toks2 - toks1; // token holdings change
-        x8 = parseInt(web3.toWei(pricePaid, "ether"))/tokenPrice;
+        x8 = parseInt(web3.utils.toWei(String(pricePaid), "ether"))/tokenPrice;
         assert.equal(x4, x5 + x6,"Buyer's balance reduced by the cost of tokens and gas");
         assert.equal(x7, x8 ,"Buyer's token holdings increased by the number of bought tokens");
         assert.equal(x3, x5 ,"Wallet balance increased by the cost of sold tokens");

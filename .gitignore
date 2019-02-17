@@ -1,9 +1,8 @@
-.next
 build
-node_modules
-pages
 utils
+node_modules
 ganache.sh
 OPCPool.code-workspace
 steps.txt
 opcp_readme.docx
+truffle.1.js_

@@ -2,7 +2,7 @@ const OPCPToken = artifacts.require("../contracts/OPCPToken.sol");
 let opcp_token;
 
 const totalSupply = 5 * Math.pow(10, 5);
-const rate = web3.toWei(20, "finney");
+const rate = web3.utils.toWei("20", "finney");
 const targetEarningsPct = 2;
 const accountingCycleDays = 28;
 const spLockedTokens = 100;
@@ -105,13 +105,12 @@ contract('OPCPToken', async (accounts)=> {
 
         result = await opcp_token.unregisterSP({from:sp1});
 
-        assert.equal(3, result.logs.length, "Triggers three EVTs");
-        assert.equal(result.logs[0].event, "Burn", "EVT: of type Burn");
-        assert.equal(result.logs[1].event, "Transfer", "EVT: of type Transfer");
-        assert.equal(result.logs[2].event, "ProviderCancelRegistration", "EVT: of type ProviderCancelRegistration");
-        assert.equal(result.logs[2].args.provider, sp1, "EVT: Canceling provider address");
-        assert.equal(result.logs[2].args.finalSettlement.toNumber(), 0, "EVT: Final Settlement amount");
-        assert.equal(result.logs[2].args.burnedTokens.toNumber(), Math.pow(10, 6), "EVT: Burned Tokens");
+        assert.equal(2, result.logs.length, "Triggers two EVTs");
+        assert.equal(result.logs[0].event, "Transfer", "EVT: of type Transfer");
+        assert.equal(result.logs[1].event, "ProviderCancelRegistration", "EVT: of type ProviderCancelRegistration");
+        assert.equal(result.logs[1].args.provider, sp1, "EVT: Canceling provider address");
+        assert.equal(result.logs[1].args.finalSettlement.toNumber(), 0, "EVT: Final Settlement amount");
+        assert.equal(result.logs[1].args.burnedTokens.toNumber(), Math.pow(10, 6), "EVT: Burned Tokens");
         console.log("UN-registerSP() gas used: ", result.receipt.gasUsed);
 
         result = await  opcp_token.providers.call(sp1);
@@ -130,22 +129,22 @@ contract('OPCPToken', async (accounts)=> {
     it("Accepts direct customer deposits", async()=>{
         result = await opcp_token.transfer(sp1, 6  * Math.pow(10, 6));
         result = await opcp_token.registerSP("SP1 Provider w 6MT", {from:sp1});
-        result = await opcp_token.customerDirectDeposit(sp2, {from:cus1, value:web3.toWei(2, "ether")});
+        result = await opcp_token.customerDirectDeposit(sp2, {from:cus1, value:web3.utils.toWei("2", "ether")});
         console.log("CustomerDirectDeposit() gas used: ", result.receipt.gasUsed);
 
         result = await  opcp_token.customers.call(cus1);
         cust = {
           provider: result[0],
-          balance: web3.fromWei(result[1].toNumber(), "ether")
+          balance: web3.utils.fromWei(result[1], "ether")
         };
         assert.equal(cust.provider, owner);
         assert.equal(cust.balance, 2);
 
-        result = await opcp_token.customerDirectDeposit(sp1, {from:cus2, value:web3.toWei(3, "ether")});
+        result = await opcp_token.customerDirectDeposit(sp1, {from:cus2, value:web3.utils.toWei("3", "ether")});
         result = await  opcp_token.customers.call(cus2);
         cust = {
           provider: result[0],
-          balance: web3.fromWei(result[1].toNumber(), "ether")
+          balance: web3.utils.fromWei(result[1], "ether")
         };
         assert.equal(cust.provider, sp1);
         assert.equal(cust.balance, 3);
@@ -156,19 +155,19 @@ contract('OPCPToken', async (accounts)=> {
         result = await opcp_token.registerSP("SP1 Provider w 6MT", {from:sp1});
         
         try{   // inactive service provider test
-            await opcp_token.customerDeposit(cus1, {from:sp2, value:web3.toWei(2, "ether")});
+            await opcp_token.customerDeposit(cus1, {from:sp2, value:web3.utils.toWei("2", "ether")});
             assert(false);
         }
         catch (error){
             assert.isAbove(error.message.indexOf("revert"), 1, "Bad test. Expected exception on valid service provider deposit");
         }
 
-        result = await opcp_token.customerDeposit(cus1, {from:sp1, value:web3.toWei(2, "ether")});
+        result = await opcp_token.customerDeposit(cus1, {from:sp1, value:web3.utils.toWei("2", "ether")});
         console.log("CustomerDeposit() gas used: ", result.receipt.gasUsed);
         result = await  opcp_token.customers.call(cus1);
         cust = {
           provider: result[0],
-          balance: web3.fromWei(result[1].toNumber(), "ether")
+          balance: web3.utils.fromWei(result[1], "ether")
         };
         assert.equal(cust.provider, sp1);
         assert.equal(cust.balance, 2);
@@ -177,36 +176,36 @@ contract('OPCPToken', async (accounts)=> {
     it("Handles direct customer withdrawals", async()=>{
         result = await opcp_token.transfer(sp1, 6  * Math.pow(10, 6));
         result = await opcp_token.registerSP("SP1 Provider w 6MT", {from:sp1});
-        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.toWei(5, "ether")});
+        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.utils.toWei("5", "ether")});
         try{   // over the limit withdrawal
-            await opcp_token.customerDirectWithdrawal(web3.toWei(10, "ether"), {from:cus1});
+            await opcp_token.customerDirectWithdrawal(web3.utils.toWei("10", "ether"), {from:cus1});
             assert(false);
         }
         catch (error){
             assert.isAbove(error.message.indexOf("revert"), 1, "Bad test. Over the limit withdrawal");
         }
 
-        result = await opcp_token.customerDirectWithdrawal(web3.toWei(3, "ether"), {from:cus1});
+        result = await opcp_token.customerDirectWithdrawal(web3.utils.toWei("3", "ether"), {from:cus1});
         assert.equal(1, result.logs.length, "Triggers one EVT");
         assert.equal(result.logs[0].event, "CustomerWithdrawal", "EVT: of type CustomerWithdrawal");
         assert.equal(result.logs[0].args.customer, cus1, "EVT: Customer address");
         assert.equal(result.logs[0].args.provider, sp1, "EVT: Provider address");
         assert.equal(result.logs[0].args.fromAddress, cus1, "EVT: Source address");
-        assert.equal(web3.fromWei(result.logs[0].args.amount.toNumber(), "ether"), 3, "EVT: Amount");
+        assert.equal(web3.utils.fromWei(result.logs[0].args.amount, "ether"), 3, "EVT: Amount");
         console.log("CustomerDirectWithdrawal() gas used: ", result.receipt.gasUsed);
 
         result = await  opcp_token.customers.call(cus1);
         cust = {
           provider: result[0],
-          balance: result[1].toNumber()
+          balance: web3.utils.fromWei(result[1])
         };
-        assert.equal(web3.fromWei(cust.balance, "ether"), 2, "Customer balance after withdrawal");
+        assert.equal(cust.balance, 2, "Customer balance after withdrawal");
 
-        result = await opcp_token.customerDirectWithdrawal(cust.balance, {from:cus1});
+        result = await opcp_token.customerDirectWithdrawal(web3.utils.toWei(String(cust.balance), "ether"), {from:cus1});
         result = await  opcp_token.customers.call(cus1);
         cust = {
             provider: result[0],
-            balance: web3.fromWei(result[1].toNumber(), "ether")
+            balance: web3.utils.fromWei(result[1], "ether")
         };
         assert.equal(cust.balance, 0, "Customer balance after withdrawal");
     });
@@ -214,10 +213,10 @@ contract('OPCPToken', async (accounts)=> {
     it("Handles customer withdrawals by provider", async()=>{
         result = await opcp_token.transfer(sp1, 6  * Math.pow(10, 6));
         result = await opcp_token.registerSP("SP1 Provider w 6MT", {from:sp1});
-        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.toWei(5, "ether")});
+        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.utils.toWei("5", "ether")});
 
         try{   // unauthorized provider request
-            await opcp_token.customerWithdrawal(cus1, web3.toWei(1, "ether"), {from:sp2});
+            await opcp_token.customerWithdrawal(cus1, web3.utils.toWei("1", "ether"), {from:sp2});
             assert(false);
         }
         catch (error){
@@ -225,26 +224,26 @@ contract('OPCPToken', async (accounts)=> {
         }
 
         try{   // over the limit withdrawal
-            await opcp_token.customerWithdrawal(cus1, web3.toWei(10, "ether"), {from:sp1});
+            await opcp_token.customerWithdrawal(cus1, web3.utils.toWei("10", "ether"), {from:sp1});
             assert(false);
         }
         catch (error){
             assert.isAbove(error.message.indexOf("revert"), 1, "Bad test. Exceeded withdrawal limit");
         }
 
-        result = await opcp_token.customerWithdrawal(cus1, web3.toWei(3, "ether"), {from:sp1});
+        result = await opcp_token.customerWithdrawal(cus1, web3.utils.toWei("3", "ether"), {from:sp1});
         assert.equal(1, result.logs.length, "Triggers one EVT");
         assert.equal(result.logs[0].event, "CustomerWithdrawal", "EVT: of type CustomerWithdrawal");
         assert.equal(result.logs[0].args.customer, cus1, "EVT: Customer address");
         assert.equal(result.logs[0].args.provider, sp1, "EVT: Provider address");
         assert.equal(result.logs[0].args.fromAddress, sp1, "EVT: Source address");
-        assert.equal(web3.fromWei(result.logs[0].args.amount.toNumber(), "ether"), 3, "EVT: Amount");
+        assert.equal(web3.utils.fromWei(result.logs[0].args.amount, "ether"), 3, "EVT: Amount");
         console.log("CustomerWithdrawal() gas used: ", result.receipt.gasUsed);
 
         result = await  opcp_token.customers.call(cus1);
         cust = {
           provider: result[0],
-          balance: web3.fromWei(result[1].toNumber(), "ether")
+          balance: web3.utils.fromWei(result[1], "ether")
         };
         assert.equal(cust.balance, 2, "Customer balance after withdrawal");
     });
@@ -253,10 +252,10 @@ contract('OPCPToken', async (accounts)=> {
     it("Handles customer session", async()=>{
         result = await opcp_token.transfer(sp1, 6  * Math.pow(10, 6));
         result = await opcp_token.registerSP("SP1 Provider w 6MT", {from:sp1});
-        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.toWei(1, "ether")})
+        result = await opcp_token.customerDirectDeposit(sp1, {from:cus1, value:web3.utils.toWei("1", "ether")})
 
         try{   // customer account with zero balance
-            await opcp_token.customerSession(cus2, web3.toWei(1, "ether"), {from:sp1});
+            await opcp_token.customerSession(cus2, web3.utils.toWei("1", "ether"), {from:sp1});
             assert(false);
         }
         catch (error){
@@ -273,16 +272,16 @@ contract('OPCPToken', async (accounts)=> {
           cycleEarnings: result[5].toNumber()
         }
         bal1 = prov1.cycleEarnings;
-        bal2 = (await  opcp_token.cycleEarnings.call()).toNumber();
+        bal2 = (await  opcp_token.cycleEarnings.call());
 
-        result = await opcp_token.customerSession(cus1, web3.toWei(2, "ether"), {from:sp1});
+        result = await opcp_token.customerSession(cus1, web3.utils.toWei("2", "ether"), {from:sp1});
 
         assert.equal(1, result.logs.length, "Triggers one EVT");
         assert.equal(result.logs[0].event, "CustomerSession", "EVT: of type CustomerSession");
         assert.equal(result.logs[0].args.customer, cus1, "EVT: Customer address");
         assert.equal(result.logs[0].args.provider, sp1, "EVT: Provider address");
         assert.equal(result.logs[0].args.fromAddress, sp1, "EVT: Source address");
-        assert.equal(web3.fromWei(result.logs[0].args.amount.toNumber(), "ether"), 2, "EVT: Amount");
+        assert.equal(web3.utils.fromWei(result.logs[0].args.amount, "ether"), 2, "EVT: Amount");
         console.log("CustomerSession() gas used: ", result.receipt.gasUsed);
 
         result = await  opcp_token.providers.call(sp1);
@@ -291,14 +290,12 @@ contract('OPCPToken', async (accounts)=> {
           nextSettlement: result[1].toNumber() * 1000,
           lockedTokens: result[2].toNumber(),
           active: result[3],
-          earnings: result[4].toNumber(),
-          cycleEarnings: result[5].toNumber()
+          earnings: result[4],
+          cycleEarnings: result[5]
         }
         bal3 = prov1.cycleEarnings;
-        bal4 = (await  opcp_token.cycleEarnings.call()).toNumber();
-
-        assert.equal(bal3 - bal1, web3.toWei(2, "ether"), "Provider's running total of customer sessions");
-        assert.equal(bal4 - bal2, web3.toWei(2, "ether"), "Contract's running total of customer sessions");
-
+        bal4 = await  opcp_token.cycleEarnings.call();
+        assert.equal(web3.utils.fromWei(String(bal3), "ether") - web3.utils.fromWei(String(bal1), "ether"), 2, "Provider's running total of customer sessions");
+        assert.equal(web3.utils.fromWei(String(bal4), "ether") - web3.utils.fromWei(String(bal2), "ether"), 2, "Contract's running total of customer sessions");
     });
 });

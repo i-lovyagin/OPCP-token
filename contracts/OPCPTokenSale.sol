@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.4;
 
 /**
  * @title Operating Capital Pool token sale
@@ -16,7 +16,7 @@ contract OPCPTokenSale {
 	OPCPToken public token;
 // address to store funds raised at the first stage of the contract lifecycle
 // funds to be used for R&D and marketing
-	address public wallet;
+	address payable public wallet;
 //  running total of raised weis
   	uint256 public weiRaised = 0;
 // future use: buying back tokens flag
@@ -48,19 +48,19 @@ contract OPCPTokenSale {
 	event TokenRefund(address indexed holder, uint256 price, uint256 tokens, uint256 refund);
 
 
-    constructor(address _wallet, OPCPToken _token, uint256 _initFunding, uint8 _ownerPct)  public  {
-		require(_wallet != address(0));
-		require(_token != address(0));
+  constructor(address payable _wallet, OPCPToken _token, uint256 _initFunding, uint8 _ownerPct)  public  {
+
 		wallet = _wallet;
 		token = _token;
 		financingGoal = token.toWei(token.toUnits(_initFunding));
 		token.setStore(_ownerPct);
+
 	}
 
 	/**
 	* @dev Fallback function. Receives a payment in Wei and sells tokens if possible
 	*/
-	function () public payable {
+	function () external payable {
 		buyTokens();
 	}
 
