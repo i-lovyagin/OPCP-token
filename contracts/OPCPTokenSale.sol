@@ -23,7 +23,7 @@ contract OPCPTokenSale {
 	bool public refundActive = false;
 
 // flag indicates the first stage of the contract life cycle. No real operations yet and service providers aren't able to register	
-	bool bootstrapMode = true;
+	bool public bootstrapMode = true;
 
 // amount of financing used in R&D and marketing
 	uint256 public financingGoal;
@@ -77,8 +77,8 @@ contract OPCPTokenSale {
 	* @dev Function that sets a flag to start refunding tokens
 	*/
 	function startRefunding() public {
-		require(msg.sender == token.owner());
 		refundActive = true;
+		require(msg.sender == token.owner());
 	}
 
 	/**
@@ -90,13 +90,14 @@ contract OPCPTokenSale {
 		require(token.balanceOf(address(this)) > token.fromWei(msg.value));
 	// see if the buyer already has tokens and may be eligible for unclaimed past profit distributions
 		uint256 unclaimedDistributions = token.getUnclaimedDistributions(msg.sender);
+	// transfer purchased tokens from the store to the buyer
+		uint256 tokens = token.transferInWei(msg.sender, msg.value);
+		weiRaised = weiRaised.add(msg.value);
+		emit TokenPurchase(	msg.sender,msg.sender,	msg.value,	tokens);
 		if (unclaimedDistributions > 0)	{
 	// transfer unclaimed earnings to the token buyer
 			msg.sender.transfer(unclaimedDistributions);
 		}
-	// transfer purchased tokens from the store to the buyer
-		uint256 tokens = token.transferInWei(msg.sender, msg.value);
-		emit TokenPurchase(	msg.sender,msg.sender,	msg.value,	tokens);
 		if (weiRaised < financingGoal)	{
 	// if initial financing goal hasn't been met yet - transfer sale proceeds to the special seed financing wallet			
 			wallet.transfer(msg.value);
@@ -105,7 +106,6 @@ contract OPCPTokenSale {
 	// otherwise transfer proceeds to the token contract to be used in operating reserve			
 			address(token).transfer(msg.value);
 		}
-		weiRaised = weiRaised.add(msg.value);
 		return true;
 	}
 
@@ -134,11 +134,11 @@ contract OPCPTokenSale {
 	// calculate token intrinsic value		
 		uint256 price = token.currentTokenValue();
 	// burn bought-back tokens. Alternatively, they could be put up for sale again...
-		token.burnFrom(msg.sender, tokens);
-		uint256 refund = price * tokens;
+		uint256 refund = price.mul(tokens);
 	// reduce running total of raised wei		
 		weiRaised = weiRaised.sub(refund);
 		emit TokenRefund(msg.sender,price,tokens,refund);
+		token.burnFrom(msg.sender, tokens);
 		msg.sender.transfer(refund);
 		return true;
 	}

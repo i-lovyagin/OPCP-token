@@ -67,7 +67,7 @@ contract OPCPToken is ERC20Burnable {
 	uint256 public initialOwnerTokens;
 
 // array of profit distribution records
-	Distribution[] distributions;
+	Distribution[] public distributions;
 
 // keeps track of the total ether amount locked in the processed profit sharing payouts that havben't been claimed yet
 	uint256 public pendingPayouts;
@@ -187,7 +187,7 @@ contract OPCPToken is ERC20Burnable {
 	* @param _ownerTokensPct share of tokens allocated to contract owner expressed in term pf percentage points
 	*/
 	function setStore(uint8 _ownerTokensPct) public {
-		initialOwnerTokens = balanceOf(owner).div(100).mul(_ownerTokensPct);
+		initialOwnerTokens = balanceOf(owner).mul(_ownerTokensPct).div(100);
 		tokenStore = msg.sender;
     _transfer(owner, tokenStore, totalSupply() - initialOwnerTokens);
 	}
@@ -229,7 +229,7 @@ contract OPCPToken is ERC20Burnable {
 		uint256 tokensToBurn  = providers[msg.sender].lockedTokens;
 		if (gain < 0)	{
 	// cycle loss converted to commission converted to tokens
-			uint256 lossInTokens = fromWei(uint256(0 - gain).div(100).mul(spCommissionPct));
+			uint256 lossInTokens = fromWei(uint256(0 - gain).mul(spCommissionPct).div(100));
 			if (lossInTokens <= balanceOf(msg.sender))	{
 	// compensate losses by confiscating provider's tokens
 				tokensToBurn += lossInTokens;
@@ -239,15 +239,15 @@ contract OPCPToken is ERC20Burnable {
 				tokensToBurn += balanceOf(msg.sender);  
 			}
 		}
-		else	{
-	// settle current cycle profits
-			msg.sender.transfer(uint256(gain).div(100).mul(spCommissionPct));
-		}
 	// burn tokens that haven't been unlocked yet plus compensation for the current cycle loss if any
 		if (tokensToBurn > 0)	{
 			burn(tokensToBurn);
 		}
 		emit ProviderCancelRegistration(msg.sender, uint256(gain), tokensToBurn);
+    if (gain > 0)  {
+	// settle current cycle profits
+		  msg.sender.transfer(uint256(gain).mul(spCommissionPct).div(100));
+    }
 		return true;
 	}
 
@@ -292,9 +292,9 @@ contract OPCPToken is ERC20Burnable {
 	// see if this amount is available. This check is propably unnecessary. If it fails, contract code must be very buggy		
 		require(customerDeposits >= _amount);
 		customers[msg.sender].balance = customers[msg.sender].balance.sub(_amount);
-		msg.sender.transfer(_amount);
 		customerDeposits = customerDeposits.sub(_amount);
 		emit CustomerWithdrawal(msg.sender, customers[msg.sender].provider, msg.sender, _amount);
+ 		msg.sender.transfer(_amount);
 		return true;
 	}
 
@@ -313,9 +313,9 @@ contract OPCPToken is ERC20Burnable {
 		customers[_customer].balance = customers[_customer].balance.sub(_amount);
 	// transfer funds to the customer address
 	// TODO this is a risky pattern. Customer address may be that of a malicious contract. 
-		_customer.transfer(_amount);
 		customerDeposits = customerDeposits.sub(_amount);
 		emit CustomerWithdrawal(_customer, customers[_customer].provider, msg.sender, _amount);
+		_customer.transfer(_amount);
 		return true;
 	}
 
@@ -389,12 +389,15 @@ contract OPCPToken is ERC20Burnable {
 	// number of held tokens		
 		uint256 heldTokens = balanceOf(holder); 
 		uint256 payment = 0;
+    Distribution[] memory distributions_ = distributions;  // this saves gas
+    uint256 length = distributions_.length; // this saves gas
 	// loop through array of token distributions starting from the chronologically first 
 	// distribution that hasn't been claimed by this holder yet
 		if (heldTokens > 0)	{
-			for (uint256 i = startingCycle; i < distributions.length; i++)	{
+			for (uint256 i = startingCycle; i < length; i++)	{
 				// each distribution record stores the amount of distribution and the number of tokens eligible for sharing
-				payment = payment.add(distributions[i].amount.div(distributions[i].tokenSupply).mul(heldTokens));
+        // TODO: looping through unknown length array is bad. Fix this
+				payment = payment.add(distributions_[i].amount.mul(heldTokens).div(distributions_[i].tokenSupply));
 			}
 
 		}
@@ -447,7 +450,7 @@ contract OPCPToken is ERC20Burnable {
 	function setReservePolicy(uint256 gain) internal {
 		if (!bootstrapMode)	{
 	// "required" number of tokens that would make realized per-token-gain match the target setting
-			uint256 requiredTokenSupply =fromWei( gain.div(targetEarningsPct).mul(100));
+			uint256 requiredTokenSupply =fromWei( gain.mul(100).div(targetEarningsPct));
 	//	required supply is less than total supply
 			if (requiredTokenSupply < totalSupply())	{
 	// calculate the surplus

@@ -1,4 +1,7 @@
 module.exports = {
+
+  plugins: ["truffle-security"],
+
   compilers: {
     solc: {
       version: "0.5.4"
